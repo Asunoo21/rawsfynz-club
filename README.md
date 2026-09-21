@@ -1,36 +1,21 @@
-# RAWSFYNZ CLUB — votes partagés
+# RAWSFYNZ CLUB — Cérémonie V2
 
-Cette version est prévue pour le groupe sur PC. Les votes ne sont plus stockés uniquement dans le navigateur : ils sont enregistrés dans Supabase et les résultats se mettent à jour automatiquement.
+Version avec votes partagés Supabase et révélation des résultats pendant la cérémonie.
 
-## Installation
-
-### 1. Créer la base Supabase
-- Aller sur https://supabase.com et créer un projet gratuit.
-- Ouvrir **SQL Editor**.
-- Ouvrir `supabase_schema.sql`, copier tout son contenu et cliquer sur **Run**.
-
-### 2. Récupérer les identifiants
-Dans Supabase : **Project Settings → API**.
-Copier :
-- **Project URL**
-- **Publishable/anon key** (clé publique)
-
-Ne jamais utiliser la `service_role key` dans le site.
-
-### 3. Connecter le site
-Ouvrir `supabase-config.js` et remplacer :
-- `https://TON-PROJET.supabase.co`
-- `TA_CLE_ANON_ICI`
-
-Puis remettre ces fichiers à la racine du dépôt GitHub Pages :
-`index.html`, `app.js`, `style.css`, `supabase-config.js`, `supabase_schema.sql`, `assets/`.
-
-### 4. Tester
-- Ouvrir le site sur les 8 PC.
-- Chaque personne choisit son pseudo.
-- Répondre aux 39 questions.
-- Cliquer sur **ENVOYER MES VOTES**.
-- La page Résultats lit la même base pour tout le monde.
+## Fonctionnement
+- Les 8 participants votent normalement.
+- La page Résultats n'affiche que la progression, jamais les scores.
+- Quand les 8 ont terminé, l'organisateur clique sur MODE ORGANISATEUR.
+- Code organisateur par défaut : `2026`.
+- Chaque question est révélée une par une.
+- Le ou les premiers de chaque question gagnent 1 titre.
+- À la fin, le participant ayant le plus de titres est le grand gagnant.
 
 ## Important
-Le système est volontairement simple pour une cérémonie entre amis : le pseudo est choisi par l'utilisateur. Il n'y a pas de compte/mot de passe. Pour une sécurité stricte contre l'usurpation d'un pseudo, il faudrait ajouter une authentification.
+Le code organisateur est une protection conviviale, pas une sécurité cryptographique : GitHub Pages est un site statique et son JavaScript est public. Pour un groupe d'amis, cela masque les résultats dans l'interface ; un utilisateur technique ayant accès à la base publique pourrait contourner l'interface.
+
+Pour changer le code, modifier `RAWSFYNZ_ORGANIZER_PIN` dans `supabase-config.js`.
+
+Pour remettre tous les votes à zéro dans Supabase SQL Editor :
+
+    delete from public.votes;
