@@ -36,7 +36,7 @@ async function submitVote(){
 async function fetchProgress(){
   const {data,error}=await db.rpc('get_vote_progress'); if(error)throw error;
   const row=Array.isArray(data)?data[0]:data;
-  return {complete:Number(row?.complete_voters||0), total:Number(row?.vote_count||0)};
+  return {complete:Number(row?.completed_participants||0), total:Number(row?.total_responses||0)};
 }
 async function fetchCeremonyVotes(){
   const {data,error}=await db.rpc('get_ceremony_votes',{p_pin:organizerPin}); if(error)throw error;
