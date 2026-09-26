@@ -7,7 +7,7 @@ let ceremony={unlocked:false,started:false,index:0,revealed:false,titles:Object.
 const configured=window.SUPABASE_URL&&window.SUPABASE_ANON_KEY;
 function go(s){document.getElementById(s).scrollIntoView({behavior:'smooth'});}function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
 function showStatus(m,t='info'){const e=document.querySelector('#connectionStatus');if(e){e.textContent=m;e.dataset.type=t;}}
-async function init(){try{db=window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_ANON_KEY);const {data,error}=await db.from('questions').select('id,question,position').order('position');if(error)throw error;questionRows=data||[];QUESTIONS = questionRows.map(q => q.question);showStatus('SERVEUR CONNECTÉ — votes partagés','ok');renderIdentity();await renderResults();setInterval(()=>{if(!ceremony.started&&!ceremony.unlocked)renderResults()},4000);}catch(e){console.error(e);showStatus('ERREUR DE CONNEXION','error');}}
+async function init(){try{db=window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_ANON_KEY);const {data,error}=await db.from('questions').select('id,question,position').order('position');if(error)throw error;questionRows=data||[];QUESTIONS = questionRows.map(q => q.question);showStatus('SERVEUR CONNECTÉ — votes partagés','ok');renderIdentity();await renderResults();await renderArchives();setInterval(...)(()=>{if(!ceremony.started&&!ceremony.unlocked)renderResults()},4000);}catch(e){console.error(e);showStatus('ERREUR DE CONNEXION','error');}}
 function renderIdentity(){
   const saved=localStorage.getItem('rawsfynzVoter')||'';
   if(saved&&FRIENDS.includes(saved)){ current=saved; id.innerHTML=`<div class="locked-id"><label>TON PSEUDO</label><strong>${esc(saved)}</strong><small>Pseudo verrouillé sur ce PC pour garder les votes secrets.</small></div>`; renderVote(); return; }
@@ -66,3 +66,77 @@ function nextQuestion(){if(ceremony.index===QUESTIONS.length-1){ceremony.finishe
 function renderFinal(showWinner=false){const ranks=Object.entries(ceremony.titles).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])),max=ranks[0][1],winners=ranks.filter(x=>x[1]===max);if(!showWinner){res.innerHTML=`<div class="final"><p class="eyebrow">/// CLASSEMENT FINAL ///</p><h3>LES TITRES</h3><div class="title-ranking">${ranks.map((r,i)=>`<div class="rank ${i<3?'top':''}"><span>#${i+1} — ${esc(r[0])}</span><strong>${r[1]} titre${r[1]>1?'s':''}</strong></div>`).join('')}</div><button class="btn giant" onclick="renderFinal(true)">RÉVÉLER LE GRAND GAGNANT</button></div>`;return;}res.innerHTML=`<div class="champion"><img src="logo.png"><p class="eyebrow">/// RAWSFYNZ CLUB 2026 ///</p><div class="trophy">♛</div><h3>${winners.length>1?'GRANDS GAGNANTS':'GRAND GAGNANT'}</h3><div class="champion-name">${winners.map(x=>esc(x[0])).join(' & ')}</div><p>${max} titre${max>1?'s':''} remporté${max>1?'s':''}</p><button class="btn ghost" onclick="restartCeremony()">REJOUER LA RÉVÉLATION</button></div>`;}
 function restartCeremony(){ceremony.started=true;ceremony.finished=false;ceremony.index=0;ceremony.revealed=false;ceremony.titles=Object.fromEntries(FRIENDS.map(x=>[x,0]));renderCeremony();}
 window.go=go;window.submitVote=submitVote;window.unlockCeremony=unlockCeremony;window.startCeremony=startCeremony;window.revealQuestion=revealQuestion;window.nextQuestion=nextQuestion;window.renderFinal=renderFinal;window.restartCeremony=restartCeremony;init();
+async function renderArchives(){
+  const box = document.querySelector('#archivesApp');
+  if(!box || !db) return;
+
+  try{
+    const {data: seasons, error: seasonError} = await db
+      .from('archive_seasons')
+      .select('year,grand_winner')
+      .order('year', {ascending:false});
+
+    if(seasonError) throw seasonError;
+
+    const {data: results, error: resultError} = await db
+      .from('archive_results')
+      .select('year,question_position,question_text,winner,winner_votes')
+      .order('question_position');
+
+    if(resultError) throw resultError;
+
+    if(!seasons || !seasons.length){
+      box.innerHTML = '<p>Aucune archive disponible.</p>';
+      return;
+    }
+
+    box.innerHTML = seasons.map(season => {
+      const seasonResults = (results || []).filter(r => r.year === season.year);
+
+      const questions = {};
+      seasonResults.forEach(r => {
+        if(!questions[r.question_position]){
+          questions[r.question_position] = {
+            text: r.question_text,
+            winners: []
+          };
+        }
+
+        questions[r.question_position].winners.push(
+          `${esc(r.winner)} — ${r.winner_votes} vote${r.winner_votes > 1 ? 's' : ''}`
+        );
+      });
+
+      const questionHTML = Object.entries(questions)
+        .sort((a,b) => Number(a[0]) - Number(b[0]))
+        .map(([position,q]) => `
+          <div class="archive-question">
+            <p class="eyebrow">CATÉGORIE ${String(position).padStart(2,'0')}</p>
+            <h3>${esc(q.text)}</h3>
+            <p>🏆 ${q.winners.join(' & ')}</p>
+          </div>
+        `).join('');
+
+      return `
+        <div class="secret-card archive-season">
+          <p class="eyebrow">/// SAISON ${season.year} ///</p>
+
+          <div class="lock">♛</div>
+
+          <h3>GRAND GAGNANT ${season.year}</h3>
+          <h2>${esc(season.grand_winner)}</h2>
+
+          <p>Champion officiel du RAWSFYNZ CLUB ${season.year}</p>
+        </div>
+
+        <div class="archive-list">
+          ${questionHTML}
+        </div>
+      `;
+    }).join('');
+
+  }catch(e){
+    console.error('Archives:', e);
+    box.innerHTML = '<p>Impossible de charger les archives.</p>';
+  }
+}
